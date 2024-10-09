@@ -19,7 +19,10 @@ module.exports = {
   },
   module: {
     rules: [
-      // You can add loaders here if needed in the future
+      {
+        test: path.resolve(__dirname, 'build/fbin.js'), // Specify the exact file to ignore
+        use: 'ignore-loader', // Use ignore-loader for that file
+      },
     ],
   },
 };
