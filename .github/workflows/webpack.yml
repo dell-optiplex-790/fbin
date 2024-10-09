@@ -1,28 +1,34 @@
-name: NodeJS with Webpack
+name: Build with Webpack
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main  # Change this to your default branch
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main  # Change this to your default branch
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-
+    
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    - name: Build
-      run: |
-        npm install
-        npx webpack
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build with Webpack
+        run: npx webpack --config webpack.config.js
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: webpack-output
+          path: dist  # Change this to your output directory
