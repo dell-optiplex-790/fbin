@@ -28,12 +28,12 @@ jobs:
         run: npm install --save-dev webpack webpack-cli terser-webpack-plugin ignore-loader
 
       - name: Prepare build folder
-        run: |
-          mkdir -p build
-          cp tmp/fbin.js build/
+        run: mkdir -p build
           
       - name: Build with Webpack
-        run: npx webpack --config webpack.config.js
+        run: |
+              npx webpack --config webpack.config.js
+              cp tmp/fbin.js build/
 
       - name: Commit and push changes
         env:
