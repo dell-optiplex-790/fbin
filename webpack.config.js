@@ -7,7 +7,7 @@ module.exports = {
   entry: './index.js', // Your entry point
   output: {
     filename: 'fbin.js', // Output file name
-    path: './tmp', // Output directory
+    path: path.resolve(__dirname, 'tmp'), // Output directory
     libraryTarget: 'commonjs2', // Support Node.js module format
   },
   optimization: {
