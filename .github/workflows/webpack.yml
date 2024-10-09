@@ -27,11 +27,19 @@ jobs:
       - name: Install webpack
         run: npm install --save-dev webpack webpack-cli terser-webpack-plugin
 
+      - name: Prepare build folder
+        run: |
+          mkdir -p build
+          
       - name: Build with Webpack
         run: npx webpack --config webpack.config.js
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3  # Updated to v3
-        with:
-          name: fbin
-          path: build  # Change this to your output directory
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatically provided token
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+          git add build
+          git commit -m "Compile latest version" || echo "No changes to commit"
+          git push
