@@ -37,7 +37,7 @@ jobs:
         run: |
           TAG="v$(date +%Y%m%d%H%M%S)"  # Or use a fixed version string
           git tag "$TAG"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }} refs/tags/"$TAG"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/dell-optiplex-790/fbin.git refs/tags/"$TAG"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
