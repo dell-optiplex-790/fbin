@@ -16,14 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install Node Version Manager (nvm)
-        run: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-
-      - name: Add nvm to environment variables
-        run: export NVM_DIR="$HOME/.nvm" -s "$NVM_DIR/nvm.sh" && \. "$NVM_DIR/nvm.sh" -s "$NVM_DIR/bash_completion" && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+      - name: Update repos and install curl
+        run: sudo apt update && sudo apt upgrade && sudo apt install -y curl
 
       - name: Set up Node.js 18
-        run: nvm install 18 && nvm use 18
+        run: curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt install -y nodejs
 
       - name: Install dependencies
         run: npm install
