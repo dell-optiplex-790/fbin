@@ -16,10 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+      - name: Install Node Version Manager (nvm0
+        run: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+
+      - name: Set up Node.js 18
+        run: nvm install 18 && nvm use 18
 
       - name: Install dependencies
         run: npm install
