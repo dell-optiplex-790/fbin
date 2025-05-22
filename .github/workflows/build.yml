@@ -8,16 +8,17 @@ on:
     branches:
       - main  # Change this to your default branch
 
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: powershell
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Set up Node.js 18
-        run: curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt install -y nodejs
 
       - name: Install dependencies
         run: npm install
@@ -26,7 +27,7 @@ jobs:
         run: npm install --save-dev webpack webpack-cli terser-webpack-plugin ignore-loader
 
       - name: Prepare build folder
-        run: mkdir -p build
+        run: mkdir build
           
       - name: Build with Webpack
         run: |
@@ -36,8 +37,7 @@ jobs:
       - name: Generate tag
         id: tag
         run: |
-          TAG="v$(date +%Y%m%d%H%M%S)"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          (Get-Date -format "\ta\g=buil\d:yyyymmdd-mmhh") | Out-File -FilePath $GITHUB_OUTPUT -Append
 
       - name: Commit and push build artifacts
         env:
@@ -56,13 +56,14 @@ jobs:
           git tag ${{ steps.tag.outputs.tag }}
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git refs/tags/${{ steps.tag.outputs.tag }}
 
-      - name: Create GitHub Release
+      - name: Create a GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
             Automatic release generated from GitHub Actions.
+            Built on Windows Server.
           files: build/fbin.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
