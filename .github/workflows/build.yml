@@ -63,7 +63,6 @@ jobs:
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
             Automatic release generated from GitHub Actions.
-            Built on Windows Server.
           files: build/fbin.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
