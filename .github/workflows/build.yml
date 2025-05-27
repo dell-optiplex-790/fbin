@@ -46,7 +46,7 @@ jobs:
           git config --local user.name "GitHub Actions"
           git config --local user.email "actions@github.com"
           git add build
-          git commit -m "Build artifacts for ${{ steps.tag.outputs.tag }}" || echo "No changes to commit"
+          git commit -m "Build artifacts for ${{ steps.tag.outputs.tag }}"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
 
       - name: Create and push tag
