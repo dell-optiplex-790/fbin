@@ -37,7 +37,7 @@ jobs:
       - name: Generate tag
         id: tag
         run: |
-          (Get-Date -format "\ta\g=buil\d:yyyymmdd-mmhh") | Out-File -FilePath $GITHUB_OUTPUT -Append
+          (Get-Date -format "\ta\g=buil\d:yyyymmdd-mmhh") | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Commit and push build artifacts
         env:
