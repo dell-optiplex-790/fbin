@@ -43,7 +43,7 @@ http.createServer((req, res) => {
   }
 
   if(req.url.startsWith('/pile/')) {
-	if(!data.admins.includes(req.socket.remoteAddress))) {
+	if(!data.admins.includes(req.socket.remoteAddress)) {
 		console.log('[PUFFERFISH] An unauthorized user tried to view a Pufferfish file')
 		res.writeHead(404, {'Content-Type': 'text/html'})
 		res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
@@ -122,14 +122,9 @@ http.createServer((req, res) => {
 		res.end(prefix + `<b>you have found a secret<br>but i will not reward you<br><a href="/">back to home</a></b></center>`)
 		return
 	}
-	if(req.url==='/api/admins') {
-		res.writeHead(200, {'Content-Type': 'application/json'})
-		res.end(JSON.stringify(admins))
-		return
-	}
 	
 	if(req.url.slice(0,9)==='/approve/') {
-		if(!data.admins.includes(req.socket.remoteAddress))) {
+		if(!data.admins.includes(req.socket.remoteAddress)) {
 			console.log('[PUFFERFISH] An unauthorized user tried to approve '+req.url.slice(9))
 			res.writeHead(404, {'Content-Type': 'text/html'})
 			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
@@ -150,7 +145,7 @@ http.createServer((req, res) => {
 	
 	
 	if(req.url.slice(0,8)==='/delete/') {
-		if(!data.admins.includes(req.socket.remoteAddress))) {
+		if(!data.admins.includes(req.socket.remoteAddress)) {
 			console.log('[PUFFERFISH] An unauthorized user tried to delete a file')
 			res.writeHead(404, {'Content-Type': 'text/html'})
 			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
@@ -174,7 +169,7 @@ http.createServer((req, res) => {
 	
 	
 	if(req.url==='/pufferfish') {
-		if(!data.admins.includes(req.socket.remoteAddress))) {
+		if(!data.admins.includes(req.socket.remoteAddress)) {
 			console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
 			res.writeHead(404, {'Content-Type': 'text/html'})
 			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
@@ -257,6 +252,7 @@ http.createServer((req, res) => {
   }
 }).listen(80, '0.0.0.0');
 console.log('[LOG] HTTP server started.')
+
 
 
 
