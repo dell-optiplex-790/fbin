@@ -7,9 +7,48 @@ var crypto = require('crypto')
 var formidable = require('formidable');
 function getHashSync(e){return fileBuffer=fs.readFileSync(e),(hash=crypto.createHash("sha256")).update(fileBuffer),hash.digest("hex")}
 var prefix = `<title>dell's file dumpster</title><center><h1>dell's file dumpster</h1>`
-var admins = fs.readFileSync(path.join(__dirname,'admins.json'))
+// create data file on first run
+if(!fs.existsSync(path.join(__dirname,'data.json'))) {
+	fs.writeFileSync(path.join(__dirname,'data.json'), '{}');
+}
+
+// create data folders
+if(!fs.existsSync(path.join(__dirname,'files'))) {
+	fs.mkdirSync(path.join(__dirname,'files'));
+}
+
+if(!fs.existsSync(path.join(__dirname,'pufferfish_files'))) {
+	fs.mkdirSync(path.join(__dirname,'pufferfish_files'));
+}
+
+if(!fs.existsSync(path.join(__dirname,'pufferfish_metadata'))) {
+	fs.mkdirSync(path.join(__dirname,'pufferfish_metadata'));
+}
+
+
+
 http.createServer((req, res) => {
+  var data = fs.readFileSync(path.join(__dirname,'data.json'));
+  if(!data.admins) {
+	  data.admins = [];
+	  fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
+  }
+  if(!data.bannedHashes) {
+	  data.bannedHashes = [];
+	  fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
+  }
+  if(!data.bannedIPs) {
+	  data.bannedIPs = [];
+	  fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
+  }
+  var admins = data.admins;
   if(req.url.startsWith('/pile/')) {
+	if(!data.admins.includes(req.connection.remoteAddress))) {
+		console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
+		res.writeHead(404, {'Content-Type': 'text/html'})
+		res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
+		return
+	}
   	let file = decodeURIComponent(req.url.slice(6))
   	let filePath = path.join(__dirname, 'pufferfish_files', file);
 
@@ -69,9 +108,9 @@ http.createServer((req, res) => {
   } else {
 	if(req.url==='/') {
 		files = fs.readdirSync(path.join(__dirname, 'files'), { withFileTypes: true }); 
-		list = '<form id="puffer" action="/pufferfish" method="post" enctype="multipart/form-data"><input type="submit" value="Pufferfish Dashboard"/></form>' + prefix + `<script type="application/javascript">function g(json){document.querySelector('input[name="ip"]').value=json.ip;fetch('/api/admins').then(r=>r.json()).then(c=>c.includes(json.ip)?console.log('authorized user :)'):document.getElementById('puffer').remove())}</script><script type="application/javascript" src="https://api.ipify.org?format=jsonp&callback=g"></script><h2>Please read <a href="/terms">the terms</a> before uploading!</h2><b>PLEASE only use ASCII for uploaded filenames...</b><h3>Uploaded files:</h3><hr><br>\n`
+		list = '<a href="/pufferfish"><button>Pufferfish Dashboard</button></a>' + prefix + `<h2>Please read <a href="/rules">the rules</a> before uploading!</h2><b>PLEASE only use ASCII for uploaded filenames...</b><h3>Uploaded files:</h3><hr><br>\n`
 		files.forEach(file => { 
-			list += `	<a href="/file/${file.name}">${file.name}</a><br>\n`
+			list += `\t<a href="/file/${file.name}">${file.name}</a><br>\n`
 		}); 
 		list += `<br><hr><a href="/upload"><button>Upload a file</button></a></center>`
 		res.writeHead(200, {'Content-Type': 'text/html'})
@@ -90,15 +129,15 @@ http.createServer((req, res) => {
 	}
 	
 	if(req.url.slice(0,9)==='/approve/') {
-		var form = new formidable.IncomingForm()
-		form.parse(req, (err, fields, files) => {
-			if(!fields.ip) {
-				console.log('[PUFFERFISH] An unauthorized user tried to approve '+req.url.slice(9))
+			if(!data.admins.includes(req.connection.remoteAddress))) {
+				console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
 				res.writeHead(404, {'Content-Type': 'text/html'})
 				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
 				return
 			}
-			if(!admins.includes(fields.ip[0])) {
+		var form = new formidable.IncomingForm()
+		form.parse(req, (err, fields, files) => {
+			if(!data.admins.includes(req.connection.remoteAddress))) {
 				console.log('[PUFFERFISH] An unauthorized user tried to approve '+req.url.slice(9))
 				res.writeHead(404, {'Content-Type': 'text/html'})
 				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
@@ -108,8 +147,8 @@ http.createServer((req, res) => {
 			if(fs.existsSync(path.join(__dirname, 'pufferfish_files', file))) {
 				fs.unlinkSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`))
 				fs.moveSync(path.join(__dirname, 'pufferfish_files', file), path.join(__dirname, 'files', file))
-				res.writeHead(200, {'Content-Type': 'text/html'})
-				res.end(`<form id="e" method="post" action="/pufferfish"><input type="hidden" name="ip" value="${fields.ip}" /></form><script>document.getElementById("e").submit()</script>`)
+				res.writeHead(301, {'Location': '/pufferfish'})
+				res.end()
 				return
 			}
 			res.end('{"success":"false"}')
@@ -120,32 +159,24 @@ http.createServer((req, res) => {
 	
 	
 	if(req.url.slice(0,8)==='/delete/') {
+		if(!data.admins.includes(req.connection.remoteAddress))) {
+			console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
+			res.writeHead(404, {'Content-Type': 'text/html'})
+			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
+			return
+		}
 		var form = new formidable.IncomingForm()
 		form.parse(req, (err, fields, files) => {
-			if(!fields.ip) {
-				console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
-				res.writeHead(404, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
-				return
-			}
-			if(!admins.includes(fields.ip[0])) {
-				console.log('[PUFFERFISH] An unauthorized user tried to delete '+req.url.slice(8))
-				res.writeHead(404, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
-				return
-			}
 			file = req.url.slice(8)
 			if(fs.existsSync(path.join(__dirname, 'pufferfish_files', file))) {
-				banned_ips = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_ips.json')))
-				bannedhashes = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_hashes.json')))
-				bannedhashes.push(getHashSync(path.join(__dirname, 'pufferfish_files', file)))
-				banned_ips.push(fs.readFileSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`)).toString())
-				fs.writeFileSync(path.join(__dirname,'banned_ips.json'), JSON.stringify(banned_ips))
-				fs.writeFileSync(path.join(__dirname,'banned_hashes.json'), JSON.stringify(bannedhashes))
+				data.bannedIPs = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_ips.json')))
+				data.bannedHashes.push(getHashSync(path.join(__dirname, 'pufferfish_files', file)))
+				data.bannedIPs.push(fs.readFileSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`)).toString())
+				fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
 				fs.unlinkSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`))
 				fs.unlinkSync(path.join(__dirname, 'pufferfish_files', file))
-				res.writeHead(200, {'Content-Type': 'text/html'})
-				res.end(`<form id="e" method="post" action="/pufferfish"><input type="hidden" name="ip" value="${fields.ip}" /></form><script>document.getElementById("e").submit()</script>`)
+				res.writeHead(301, {'Location': '/pufferfish'})
+				res.end()
 				return
 			}
 			res.end('{"success":"false"}')
@@ -158,16 +189,10 @@ http.createServer((req, res) => {
 	if(req.url==='/pufferfish') {
 		var form = new formidable.IncomingForm()
 		form.parse(req, (err, fields, files) => {
-			if(!fields.ip) {
+			if(!data.admins.includes(req.connection.remoteAddress))) {
 				console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
 				res.writeHead(404, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>the resource at /pufferfish could not be found :(<br><a href="/">back to home</a></b></center>`)
-				return
-			}
-			if(!admins.includes(fields.ip[0])) {
-				console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
-				res.writeHead(404, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>the resource at /pufferfish could not be found :(<br><a href="/">back to home</a></b></center>`)
+				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
 				return
 			}
 			console.log('[PUFFERFISH] Someone viewed the dashboard!')
@@ -176,16 +201,16 @@ http.createServer((req, res) => {
 			files.forEach(file => { 
 				list += `	<a href="/pile/${file.name}">${file.name}</a><b style="text-indent:50px;word-spacing:50px"><form style="display:inline-block" action="/approve/${file.name}" method="post" enctype="multipart/form-data"><input name="ip" required style="display:none" value="${fields.ip[0]}"></input><input type="submit" value="Approve"/></form><form style="display:inline-block" action="/delete/${file.name}" method="post" enctype="multipart/form-data"><input name="ip" required style="display:none" value="${fields.ip[0]}"></input><input type="submit" value="Delete"/></form> IP:</b><b> ${fs.readFileSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file.name}`)).toString()}</b><br>\n`
 			}); 
-			list += `<br><hr><br><b>PLEASE DO NOT APPROVE FILES THAT BREAK <a href="/terms">THE TERMS</a>!</b></center>`
+			list += `<br><hr><br><b>PLEASE DO NOT APPROVE FILES THAT BREAK <a href="/rules">THE RULES</a>!</b></center>`
 			res.writeHead(200, {'Content-Type': 'text/html'})
 			res.end(list)
 			return
 		})
 		return
 	}
-	if(req.url==='/terms') {
+	if(req.url==='/rules') {
 		res.writeHead(200, {'Content-Type': 'text/html'})
-		res.end(prefix + `<h2>PLEASE FOLLOW THESE TERMS</h2><b>Inappropriate content is an eyesore and is a bannable offence.<br>Promoting inappropriate sites is also seen as an eyesore and is a bannable offence.<br>Anyone who disagrees deserves to get their PC wiped and destroyed and to get arrested for life.</b><br><a href="/">back to home</a></b></center>`)
+		res.end(prefix + `<h2>Please follow these rules</h2><p>1. Please DO NOT upload NSFW. Please. Don't.</p><br><a href="/">back to home</a></b></center>`)
 		return
 	}
 	if(req.url==='/upload-file') {
@@ -200,23 +225,21 @@ http.createServer((req, res) => {
 					res.end(prefix + `<b>something is breaking :(<br>if you are dell then check the console</b></center>`)
 					return
 				}
-				banned_ips = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_ips.json')))
-				if(banned_ips.includes(ip)) {
+				if(data.bannedIPs.includes(ip)) {
 					fs.unlinkSync(files.upload[0].filepath)
 					res.writeHead(401, {'Content-Type': 'text/html'})
-					res.end('<h1>401 Unauthorized</h1><p>inappropriate content does not belong in fbin, sussy baka</p>')
+					res.end('<h1>401 Unauthorized</h1><p>nsfw does not belong on fbin</p>')
 					return
 				}
 				
 				
-				bannedhashes = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_hashes.json')))
 				hash = getHashSync(files.upload[0].filepath)
-				if(bannedhashes.includes(hash)) {
+				if(data.bannedHashes.includes(hash)) {
 					fs.unlinkSync(files.upload[0].filepath)
 					res.writeHead(401, {'Content-Type': 'text/html'})
-					res.end('<h1>401 Unauthorized</h1><p>inappropriate content does not belong in fbin, sussy baka</p>')
-					banned_ips.push(ip)
-					fs.writeFileSync(path.join(__dirname,'banned_ips.json'), JSON.stringify(banned_ips))
+					res.end('<h1>401 Unauthorized</h1><p>nsfw does not belong on fbin</p>')
+					data.bannedIPs.push(ip)
+					fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
 					return
 				}
 				fs.renameSync(files.upload[0].filepath, path.join(__dirname, 'files', files.upload[0].originalFilename))
@@ -226,7 +249,7 @@ http.createServer((req, res) => {
 					fs.moveSync(path.join(__dirname, 'files', files.upload[0].originalFilename), path.join(__dirname, 'pufferfish_files', files.upload[0].originalFilename))
 					fs.writeFileSync(path.join(__dirname, 'pufferfish_metadata', 'ip.'+files.upload[0].originalFilename), ip)
 					res.writeHead(200, {'Content-Type':'text/html'})
-					res.end(`<h1>This file is being held for manual review.</h1><b>If this file is inappropriate, you will be banned from uploading.</b>`)
+					res.end(`<h1>This file is being held for manual review.</h1><b>If this file is considered NSFW, you will be banned from uploading.</b>`)
 				} else {
 					console.log(`[UPLOAD] File ${files.upload[0].originalFilename} has been uploaded by a user with the IP of ${ip}`)
 					res.writeHead(301, {'Location': '/'})
@@ -240,7 +263,7 @@ http.createServer((req, res) => {
 		return
 	}
 	if(req.url==='/upload') {
-		res.end(`${prefix}<b>PLEASE only use ASCII for uploaded filenames...</b><h3>Upload a file</h3><form action="/upload-file" method="post" enctype="multipart/form-data"><input type="file" name="upload" required><input name="ip" required style="display:none"><script type="application/javascript">function g(json){document.querySelector('input[name="ip"]').value=json.ip}</script><script type="application/javascript" src="https://api.ipify.org?format=jsonp&callback=g"></script><br><br><input type="submit" value="Upload"></form><br><h3>By uploading to fbin, you agree to <a href="/terms">its terms</a>.</h3><br><a href="/">back to home</a></center>`);
+		res.end(`${prefix}<b>PLEASE only use ASCII for uploaded filenames...</b><h3>Upload a file</h3><form action="/upload-file" method="post" enctype="multipart/form-data"><input type="file" name="upload" required><br><br><input type="submit" value="Upload"></form><br><h3>By uploading to fbin, you agree to <a href="/terms">its terms</a>.</h3><br><a href="/">back to home</a></center>`);
 		return
 	}	
 
@@ -251,4 +274,5 @@ http.createServer((req, res) => {
   }
 }).listen(80, '0.0.0.0');
 console.log('[LOG] HTTP server started.')
+
 
