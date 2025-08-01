@@ -21,11 +21,11 @@ http.createServer((req, res) => {
 				res.end(prefix + `<b>the file '${file}' could not be found in Pufferfish :(<br><a href="/">back to home</a></b></center>`)
       	 		} else {
 				res.writeHead(500, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>something is breaking :(<br>if you are dell then check the console</b></center>`)
+				res.end(prefix + `<b>something is breaking :(<br>if you are the owner then check the console</b></center>`)
       			}
       			return
     		}
-		console.log(`[PUFFERFISH] The held file '${file}' was viewed. Hopefully by an admin.`)
+		console.log(`[PUFFERFISH] The held file '${file}' was viewed by ${req.connection.remoteAddress}. Hopefully by an admin.`)
     		let mimeType = mime.lookup(filePath) || 'application/octet-stream';
    		res.setHeader('Content-Type', mimeType);
     		let fileStream = fs.createReadStream(filePath);
@@ -45,7 +45,7 @@ http.createServer((req, res) => {
   	fs.stat(filePath, (err, stats) => {
    		if (err) {
     			if (err.code === 'ENOENT') {
-				console.log(`[VIEW] The inexistent file '${file}' was attempted to be viewed.`)
+				console.log(`[VIEW] The inexistent file '${file}' was attempted to be viewed by ${req.connection.remoteAddress}.`)
 				res.writeHead(404, {'Content-Type': 'text/html'})
 				res.end(prefix + `<b>the file '${file}' could not be found :(<br><a href="/">back to home</a></b></center>`)
       	 		} else {
@@ -54,7 +54,7 @@ http.createServer((req, res) => {
       			}
       			return
     		}
-		console.log(`[VIEW] The file '${file}' was viewed.`)
+		console.log(`[VIEW] The file '${file}' was viewed by ${req.connection.remoteAddress}.`)
     		let mimeType = mime.lookup(filePath) || 'application/octet-stream';
    		res.setHeader('Content-Type', mimeType);
     		let fileStream = fs.createReadStream(filePath);
@@ -69,7 +69,7 @@ http.createServer((req, res) => {
   } else {
 	if(req.url==='/') {
 		files = fs.readdirSync(path.join(__dirname, 'files'), { withFileTypes: true }); 
-		list = '<form id="puffer" action="/pufferfish" method="post" enctype="multipart/form-data"><input name="ip" required style="display:none"></input><input type="submit" value="Pufferfish Dashboard"/></form>' + prefix + `<script type="application/javascript">function g(json){document.querySelector('input[name="ip"]').value=json.ip;fetch('/api/admins').then(r=>r.json()).then(c=>c.includes(json.ip)?console.log('authorized user :)'):document.getElementById('puffer').remove())}</script><script type="application/javascript" src="https://api.ipify.org?format=jsonp&callback=g"></script><h2>Please read <a href="/terms">the terms</a> before uploading!</h2><b>PLEASE only use ASCII for uploaded filenames...</b><h3>Uploaded files:</h3><hr><br>\n`
+		list = '<form id="puffer" action="/pufferfish" method="post" enctype="multipart/form-data"><input type="submit" value="Pufferfish Dashboard"/></form>' + prefix + `<script type="application/javascript">function g(json){document.querySelector('input[name="ip"]').value=json.ip;fetch('/api/admins').then(r=>r.json()).then(c=>c.includes(json.ip)?console.log('authorized user :)'):document.getElementById('puffer').remove())}</script><script type="application/javascript" src="https://api.ipify.org?format=jsonp&callback=g"></script><h2>Please read <a href="/terms">the terms</a> before uploading!</h2><b>PLEASE only use ASCII for uploaded filenames...</b><h3>Uploaded files:</h3><hr><br>\n`
 		files.forEach(file => { 
 			list += `	<a href="/file/${file.name}">${file.name}</a><br>\n`
 		}); 
@@ -191,6 +191,7 @@ http.createServer((req, res) => {
 	if(req.url==='/upload-file') {
 		if(req.method.toLowerCase() === 'post') {
 			let form = new formidable.IncomingForm();
+			var ip = req.connection.remoteAddress;
 			form.uploadDir = path.join(__dirname, 'files');
 			form.keepExtensions = true;
 			form.parse(req, (err, fields, files) => {
@@ -200,7 +201,7 @@ http.createServer((req, res) => {
 					return
 				}
 				banned_ips = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_ips.json')))
-				if(banned_ips.includes(fields.ip[0])) {
+				if(banned_ips.includes(ip)) {
 					fs.unlinkSync(files.upload[0].filepath)
 					res.writeHead(401, {'Content-Type': 'text/html'})
 					res.end('<h1>401 Unauthorized</h1><p>inappropriate content does not belong in fbin, sussy baka</p>')
@@ -214,20 +215,20 @@ http.createServer((req, res) => {
 					fs.unlinkSync(files.upload[0].filepath)
 					res.writeHead(401, {'Content-Type': 'text/html'})
 					res.end('<h1>401 Unauthorized</h1><p>inappropriate content does not belong in fbin, sussy baka</p>')
-					banned_ips.push(fields.ip[0])
+					banned_ips.push(ip)
 					fs.writeFileSync(path.join(__dirname,'banned_ips.json'), JSON.stringify(banned_ips))
 					return
 				}
 				fs.renameSync(files.upload[0].filepath, path.join(__dirname, 'files', files.upload[0].originalFilename))
 				
 				if((files.upload[0].originalFilename.endsWith('.jpg'))||(files.upload[0].originalFilename.endsWith('.png'))||(files.upload[0].originalFilename.endsWith('.jpeg'))||(files.upload[0].originalFilename.endsWith('.bmp'))||(files.upload[0].originalFilename.endsWith('.mov'))||(files.upload[0].originalFilename.endsWith('.avi'))||(files.upload[0].originalFilename.endsWith('.mp4'))) {
-					console.log(`[UPLOAD] File ${files.upload[0].originalFilename} has been uploaded by a user with the IP of ${fields.ip[0]}, but is held for manual review.`)
+					console.log(`[UPLOAD] File ${files.upload[0].originalFilename} has been uploaded by a user with the IP of ${ip}, but is held for manual review.`)
 					fs.moveSync(path.join(__dirname, 'files', files.upload[0].originalFilename), path.join(__dirname, 'pufferfish_files', files.upload[0].originalFilename))
-					fs.writeFileSync(path.join(__dirname, 'pufferfish_metadata', 'ip.'+files.upload[0].originalFilename), fields.ip[0])
+					fs.writeFileSync(path.join(__dirname, 'pufferfish_metadata', 'ip.'+files.upload[0].originalFilename), ip)
 					res.writeHead(200, {'Content-Type':'text/html'})
 					res.end(`<h1>This file is being held for manual review.</h1><b>If this file is inappropriate, you will be banned from uploading.</b>`)
 				} else {
-					console.log(`[UPLOAD] File ${files.upload[0].originalFilename} has been uploaded by a user with the IP of ${fields.ip[0]}`)
+					console.log(`[UPLOAD] File ${files.upload[0].originalFilename} has been uploaded by a user with the IP of ${ip}`)
 					res.writeHead(301, {'Location': '/'})
 					res.end()
 				}
@@ -250,3 +251,4 @@ http.createServer((req, res) => {
   }
 }).listen(80, '0.0.0.0');
 console.log('[LOG] HTTP server started.')
+
