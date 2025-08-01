@@ -41,7 +41,7 @@ http.createServer((req, res) => {
 	  data.bannedIPs = [];
 	  fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
   }
-  var admins = data.admins;
+
   if(req.url.startsWith('/pile/')) {
 	if(!data.admins.includes(req.connection.remoteAddress))) {
 		console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
@@ -160,7 +160,7 @@ http.createServer((req, res) => {
 	
 	if(req.url.slice(0,8)==='/delete/') {
 		if(!data.admins.includes(req.connection.remoteAddress))) {
-			console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
+			console.log('[PUFFERFISH] An unauthorized user tried to delete a file')
 			res.writeHead(404, {'Content-Type': 'text/html'})
 			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
 			return
@@ -187,25 +187,21 @@ http.createServer((req, res) => {
 	
 	
 	if(req.url==='/pufferfish') {
-		var form = new formidable.IncomingForm()
-		form.parse(req, (err, fields, files) => {
-			if(!data.admins.includes(req.connection.remoteAddress))) {
-				console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
-				res.writeHead(404, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
-				return
-			}
-			console.log('[PUFFERFISH] Someone viewed the dashboard!')
-			files = fs.readdirSync(path.join(__dirname, 'pufferfish_files'), { withFileTypes: true }); 
-			list = prefix + '<h2>Pufferfish</h2><h3>Files held for review:</h3><hr><br>\n'
-			files.forEach(file => { 
-				list += `	<a href="/pile/${file.name}">${file.name}</a><b style="text-indent:50px;word-spacing:50px"><form style="display:inline-block" action="/approve/${file.name}" method="post" enctype="multipart/form-data"><input name="ip" required style="display:none" value="${fields.ip[0]}"></input><input type="submit" value="Approve"/></form><form style="display:inline-block" action="/delete/${file.name}" method="post" enctype="multipart/form-data"><input name="ip" required style="display:none" value="${fields.ip[0]}"></input><input type="submit" value="Delete"/></form> IP:</b><b> ${fs.readFileSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file.name}`)).toString()}</b><br>\n`
-			}); 
-			list += `<br><hr><br><b>PLEASE DO NOT APPROVE FILES THAT BREAK <a href="/rules">THE RULES</a>!</b></center>`
-			res.writeHead(200, {'Content-Type': 'text/html'})
-			res.end(list)
+		if(!data.admins.includes(req.connection.remoteAddress))) {
+			console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
+			res.writeHead(404, {'Content-Type': 'text/html'})
+			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
 			return
-		})
+		}
+		console.log('[PUFFERFISH] Someone viewed the dashboard!')
+		files = fs.readdirSync(path.join(__dirname, 'pufferfish_files'), { withFileTypes: true }); 
+		list = prefix + '<h2>Pufferfish</h2><h3>Files held for review:</h3><hr><br>\n'
+		files.forEach(file => { 
+			list += `	<a href="/pile/${file.name}">${file.name}</a><b style="text-indent:50px;word-spacing:50px"><form style="display:inline-block" action="/approve/${file.name}" method="post" enctype="multipart/form-data"><input name="ip" required style="display:none" value="${fields.ip[0]}"></input><input type="submit" value="Approve"/></form><form style="display:inline-block" action="/delete/${file.name}" method="post" enctype="multipart/form-data"><input name="ip" required style="display:none" value="${fields.ip[0]}"></input><input type="submit" value="Delete"/></form> IP:</b><b> ${fs.readFileSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file.name}`)).toString()}</b><br>\n`
+		}); 
+		list += `<br><hr><br><b>PLEASE DO NOT APPROVE FILES THAT BREAK <a href="/rules">THE RULES</a>!</b></center>`
+		res.writeHead(200, {'Content-Type': 'text/html'})
+		res.end(list)
 		return
 	}
 	if(req.url==='/rules') {
@@ -274,5 +270,6 @@ http.createServer((req, res) => {
   }
 }).listen(80, '0.0.0.0');
 console.log('[LOG] HTTP server started.')
+
 
 
