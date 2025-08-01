@@ -43,8 +43,8 @@ http.createServer((req, res) => {
   }
 
   if(req.url.startsWith('/pile/')) {
-	if(!data.admins.includes(req.connection.remoteAddress))) {
-		console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
+	if(!data.admins.includes(req.socket.remoteAddress))) {
+		console.log('[PUFFERFISH] An unauthorized user tried to view a Pufferfish file')
 		res.writeHead(404, {'Content-Type': 'text/html'})
 		res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
 		return
@@ -64,7 +64,7 @@ http.createServer((req, res) => {
       			}
       			return
     		}
-		console.log(`[PUFFERFISH] The held file '${file}' was viewed by ${req.connection.remoteAddress}. Hopefully by an admin.`)
+		console.log(`[PUFFERFISH] The held file '${file}' was viewed by ${req.socket.remoteAddress}.`)
     		let mimeType = mime.lookup(filePath) || 'application/octet-stream';
    		res.setHeader('Content-Type', mimeType);
     		let fileStream = fs.createReadStream(filePath);
@@ -84,7 +84,7 @@ http.createServer((req, res) => {
   	fs.stat(filePath, (err, stats) => {
    		if (err) {
     			if (err.code === 'ENOENT') {
-				console.log(`[VIEW] The inexistent file '${file}' was attempted to be viewed by ${req.connection.remoteAddress}.`)
+				console.log(`[VIEW] The inexistent file '${file}' was attempted to be viewed by ${req.socket.remoteAddress}.`)
 				res.writeHead(404, {'Content-Type': 'text/html'})
 				res.end(prefix + `<b>the file '${file}' could not be found :(<br><a href="/">back to home</a></b></center>`)
       	 		} else {
@@ -93,7 +93,7 @@ http.createServer((req, res) => {
       			}
       			return
     		}
-		console.log(`[VIEW] The file '${file}' was viewed by ${req.connection.remoteAddress}.`)
+		console.log(`[VIEW] The file '${file}' was viewed by ${req.socket.remoteAddress}.`)
     		let mimeType = mime.lookup(filePath) || 'application/octet-stream';
    		res.setHeader('Content-Type', mimeType);
     		let fileStream = fs.createReadStream(filePath);
@@ -129,65 +129,52 @@ http.createServer((req, res) => {
 	}
 	
 	if(req.url.slice(0,9)==='/approve/') {
-			if(!data.admins.includes(req.connection.remoteAddress))) {
-				console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
-				res.writeHead(404, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
-				return
-			}
-		var form = new formidable.IncomingForm()
-		form.parse(req, (err, fields, files) => {
-			if(!data.admins.includes(req.connection.remoteAddress))) {
-				console.log('[PUFFERFISH] An unauthorized user tried to approve '+req.url.slice(9))
-				res.writeHead(404, {'Content-Type': 'text/html'})
-				res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
-				return
-			}
-			file = req.url.slice(9)
-			if(fs.existsSync(path.join(__dirname, 'pufferfish_files', file))) {
-				fs.unlinkSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`))
-				fs.moveSync(path.join(__dirname, 'pufferfish_files', file), path.join(__dirname, 'files', file))
-				res.writeHead(301, {'Location': '/pufferfish'})
-				res.end()
-				return
-			}
-			res.end('{"success":"false"}')
-			
-		})
+		if(!data.admins.includes(req.socket.remoteAddress))) {
+			console.log('[PUFFERFISH] An unauthorized user tried to approve '+req.url.slice(9))
+			res.writeHead(404, {'Content-Type': 'text/html'})
+			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
+			return
+		}
+		file = req.url.slice(9)
+		if(fs.existsSync(path.join(__dirname, 'pufferfish_files', file))) {
+			fs.unlinkSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`))
+			fs.moveSync(path.join(__dirname, 'pufferfish_files', file), path.join(__dirname, 'files', file))
+			res.writeHead(301, {'Location': '/pufferfish'})
+			res.end()
+			return
+		}
+		res.end('{"success":"false"}')
+		
 		return
 	}
 	
 	
 	if(req.url.slice(0,8)==='/delete/') {
-		if(!data.admins.includes(req.connection.remoteAddress))) {
+		if(!data.admins.includes(req.socket.remoteAddress))) {
 			console.log('[PUFFERFISH] An unauthorized user tried to delete a file')
 			res.writeHead(404, {'Content-Type': 'text/html'})
 			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
 			return
 		}
-		var form = new formidable.IncomingForm()
-		form.parse(req, (err, fields, files) => {
-			file = req.url.slice(8)
-			if(fs.existsSync(path.join(__dirname, 'pufferfish_files', file))) {
-				data.bannedIPs = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_ips.json')))
-				data.bannedHashes.push(getHashSync(path.join(__dirname, 'pufferfish_files', file)))
-				data.bannedIPs.push(fs.readFileSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`)).toString())
-				fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
-				fs.unlinkSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`))
-				fs.unlinkSync(path.join(__dirname, 'pufferfish_files', file))
-				res.writeHead(301, {'Location': '/pufferfish'})
-				res.end()
-				return
-			}
-			res.end('{"success":"false"}')
-			
-		})
+		file = req.url.slice(8)
+		if(fs.existsSync(path.join(__dirname, 'pufferfish_files', file))) {
+			data.bannedIPs = JSON.parse(fs.readFileSync(path.join(__dirname,'banned_ips.json')))
+			data.bannedHashes.push(getHashSync(path.join(__dirname, 'pufferfish_files', file)))
+			data.bannedIPs.push(fs.readFileSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`)).toString())
+			fs.writeFileSync(path.join(__dirname,'data.json'), JSON.stringify(data))
+			fs.unlinkSync(path.join(__dirname, 'pufferfish_metadata', `ip.${file}`))
+			fs.unlinkSync(path.join(__dirname, 'pufferfish_files', file))
+			res.writeHead(301, {'Location': '/pufferfish'})
+			res.end()
+			return
+		}
+		res.end('{"success":"false"}')
 		return
 	}
 	
 	
 	if(req.url==='/pufferfish') {
-		if(!data.admins.includes(req.connection.remoteAddress))) {
+		if(!data.admins.includes(req.socket.remoteAddress))) {
 			console.log('[PUFFERFISH] An unauthorized user tried to view the Pufferfish dashboard')
 			res.writeHead(404, {'Content-Type': 'text/html'})
 			res.end(prefix + `<b>the resource at ${req.url} could not be found :(<br><a href="/">back to home</a></b></center>`)
@@ -270,6 +257,7 @@ http.createServer((req, res) => {
   }
 }).listen(80, '0.0.0.0');
 console.log('[LOG] HTTP server started.')
+
 
 
 
