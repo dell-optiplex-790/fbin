@@ -188,7 +188,7 @@ http.createServer((req, res) => {
 	}
 	if(req.url==='/rules') {
 		res.writeHead(200, {'Content-Type': 'text/html'})
-		res.end(prefix + `<h2>Please follow these rules</h2><p>1. Please DO NOT upload NSFW. Please. Don't.</p><br><a href="/">back to home</a></b></center>`)
+		res.end(prefix + `<h2>Please follow these rules</h2><ol><li>Please DO NOT upload NSFW. Please. Don't.</li></ol><br><a href="/">back to home</a></b></center>`)
 		return
 	}
 	if(req.url==='/upload-file') {
@@ -252,6 +252,7 @@ http.createServer((req, res) => {
   }
 }).listen(80, '0.0.0.0');
 console.log('[LOG] HTTP server started.')
+
 
 
 
