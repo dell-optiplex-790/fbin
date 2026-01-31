@@ -50,7 +50,7 @@ jobs:
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
             Automatic release generated from GitHub Actions.
-          files: 
+          files: |
             build/fbin.js
             LICENSE.txt
         env:
